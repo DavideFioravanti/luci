@@ -170,15 +170,24 @@ return view.extend({
 	},
 
 	handleBlock: function(hostname, ev) {
-		var mtdblock = dom.parent(ev.target, '.cbi-section').querySelector('[data-name="mtdselect"] select').value;
+		var mtdblockmmcblkp = dom.parent(ev.target, '.cbi-section').querySelector('[data-name="blockselect"] select').value;
+		if (/^(\d+)p(\d+)$/.test(mtdblockmmcblkp)){
+			/* MMC partition selected */
+			var fullPath = '/dev/mmcblk%s'.format(mtdblockmmcblkp);
+			var outputBin = '%s.mmcblk%s.bin'.format(hostname, mtdblockmmcblkp);
+		}else{
+			/* mtdblock selected */
+			var fullPath = '/dev/mtdblock%d'.format(mtdblockmmcblkp);
+			var outputBin = '%s.mtd%d.bin'.format(hostname, mtdblockmmcblkp);
+		}
 		var form = E('form', {
 			'method': 'post',
 			'action': L.env.cgi_base + '/cgi-download',
 			'enctype': 'application/x-www-form-urlencoded'
 		}, [
 			E('input', { 'type': 'hidden', 'name': 'sessionid', 'value': rpc.getSessionID() }),
-			E('input', { 'type': 'hidden', 'name': 'path',      'value': '/dev/mtdblock%d'.format(mtdblock) }),
-			E('input', { 'type': 'hidden', 'name': 'filename',  'value': '%s.mtd%d.bin'.format(hostname, mtdblock) })
+			E('input', { 'type': 'hidden', 'name': 'path',      'value': fullPath }),
+			E('input', { 'type': 'hidden', 'name': 'filename',  'value': outputBin })
 		]);
 
 		ev.currentTarget.parentNode.appendChild(form);
@@ -392,18 +401,29 @@ return view.extend({
 				mtdblocks.push(match[1], match[2]);
 		});
 
-		if (mtdblocks.length) {
-			o = s.option(form.SectionValue, 'actions', form.NamedSection, 'actions', 'actions', _('Save mtdblock contents'), _('Click "Save mtdblock" to download specified mtdblock file. (NOTE: THIS FEATURE IS FOR PROFESSIONALS! )'));
+		var mmcblockparts = [];
+		procpart.split(/\n/).forEach(function(ln) {
+			var match = ln.match(/mmcblk(\d+)p(\d+)$/);
+			if (match)
+				mmcblockparts.push(match[1], match[2]);
+		});
+
+		if (mtdblocks.length + mmcblockparts.length) {
+			o = s.option(form.SectionValue, 'actions', form.NamedSection, 'actions', 'actions', _('Save mtdblock/mmcblkp contents'), _('Click "Save mtdblock/mmcblkp" to download specified mtdblock/mmcblkp file. (NOTE: THIS FEATURE IS FOR PROFESSIONALS! )'));
 			ss = o.subsection;
 
-			o = ss.option(form.ListValue, 'mtdselect', _('Choose mtdblock'));
+			o = ss.option(form.ListValue, 'blockselect', _('Choose mtdblock/mmcblkp'));
 
 			for (var i = 0; i < mtdblocks.length; i += 2)
 				o.value(mtdblocks[i], mtdblocks[i+1]);
 
-			o = ss.option(form.Button, 'mtddownload', _('Download mtdblock'));
+			for (var i = 0; i < mmcblockparts.length; i += 2)
+				o.value(mmcblockparts[i] + "p" + mmcblockparts[i+1], "mmcblk" + mmcblockparts[i] + "p" + mmcblockparts[i+1]);
+
+
+			o = ss.option(form.Button, 'mtddownload', _('Download mtdblock/mmcblkp'));
 			o.inputstyle = 'action important';
-			o.inputtitle = _('Save mtdblock');
+			o.inputtitle = _('Save mtdblock/mmcblkp');
 			o.onclick = L.bind(this.handleBlock, this, hostname);
 		}
 

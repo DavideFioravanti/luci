@@ -118,6 +118,7 @@
 			"cgi-io": [ "backup", "download" ],
 			"file": {
 				"/dev/mtdblock[0-9]*": [ "read" ],
+				"/dev/mmcblk[0-9]*p[0-9]*": [ "read" ],
 				"/etc/sysupgrade.conf": [ "read" ],
 				"/lib/upgrade/platform.sh": [ "list" ],
 				"/proc/mounts": [ "read" ],
